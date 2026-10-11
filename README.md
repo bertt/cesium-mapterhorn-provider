@@ -10,7 +10,7 @@ A [CesiumJS](https://cesium.com/cesiumjs/) terrain provider for [Mapterhorn](htt
 
 **[Sample: Mapterhorn terrain + GEBCO bathymetry](https://bertt.github.io/cesium-mapterhorn-provider/samples/bathymetry.html)** – land from Mapterhorn, seabed colour map from GEBCO (source: [`samples/bathymetry.html`](samples/bathymetry.html)).
 
-
+<img width="1298" height="876" alt="image" src="https://github.com/user-attachments/assets/6bcea38f-bbf2-4b4c-8db4-e1726887d5af" />
 
 npm package: <https://www.npmjs.com/package/@bertt/cesium-mapterhorn-provider>
 
