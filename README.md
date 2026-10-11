@@ -2,8 +2,11 @@
 
 A [CesiumJS](https://cesium.com/cesiumjs/) terrain provider for [Mapterhorn](https://mapterhorn.com/) tiles.
 
-<img width="1301" height="942" alt="image" src="https://github.com/user-attachments/assets/fc85521c-fd53-4f82-93a6-de44fe4419ff" />
+[![npm](https://img.shields.io/npm/v/@bertt/cesium-mapterhorn-provider)](https://www.npmjs.com/package/@bertt/cesium-mapterhorn-provider)
 
+npm package: <https://www.npmjs.com/package/@bertt/cesium-mapterhorn-provider>
+
+<img width="1301" height="942" alt="image" src="https://github.com/user-attachments/assets/fc85521c-fd53-4f82-93a6-de44fe4419ff" />
 
 Mapterhorn serves global elevation as **Terrarium-encoded** 512 px WebP tiles in the XYZ / Web Mercator scheme:
 

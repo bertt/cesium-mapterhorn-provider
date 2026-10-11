@@ -34,8 +34,10 @@
   </div>
   <script>
     const viewer = new Cesium.Viewer("cesiumContainer", {
-      baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({
-        url: "https://tile.openstreetmap.org/",
+      baseLayer: new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        maximumLevel: 19,
+        credit: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
       })),
       terrainProvider: new CesiumMapterhorn.MapterhornTerrainProvider({
         url: document.getElementById("tileUrl").value,
