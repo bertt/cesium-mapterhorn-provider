@@ -1,0 +1,24 @@
+{
+  "name": "@bertt/cesium-mapterhorn-provider",
+  "version": "0.1.0",
+  "author": "bertt",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bertt/cesium-mapterhorn-provider.git"
+  },
+  "publishConfig": { "access": "public" },
+  "description": "CesiumJS terrain provider for Mapterhorn (Terrarium-encoded WebP) tiles",
+  "type": "module",
+  "main": "dist/cesium-mapterhorn-provider.esm.js",
+  "module": "dist/cesium-mapterhorn-provider.esm.js",
+  "unpkg": "dist/cesium-mapterhorn-provider.min.js",
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npx http-server . -p 8080 -c-1"
+  },
+  "keywords": ["cesium", "cesiumjs", "terrain", "mapterhorn", "terrarium", "dem"],
+  "license": "MIT",
+  "peerDependencies": { "cesium": ">=1.120.0" },
+  "devDependencies": { "cesium": "^1.146.0", "esbuild": "^0.25.0" }
+}
