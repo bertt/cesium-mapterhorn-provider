@@ -6,9 +6,13 @@ A [CesiumJS](https://cesium.com/cesiumjs/) terrain provider for [Mapterhorn](htt
 
 **[Live demo](https://bertt.github.io/cesium-mapterhorn-provider/)** – Mapterhorn terrain in 3D with CesiumJS.
 
-npm package: <https://www.npmjs.com/package/@bertt/cesium-mapterhorn-provider>
-
 <img width="1301" height="942" alt="image" src="https://github.com/user-attachments/assets/fc85521c-fd53-4f82-93a6-de44fe4419ff" />
+
+**[Sample: Mapterhorn terrain + GEBCO bathymetry](https://bertt.github.io/cesium-mapterhorn-provider/samples/bathymetry.html)** – land from Mapterhorn, seabed colour map from GEBCO (source: [`samples/bathymetry.html`](samples/bathymetry.html)).
+
+
+
+npm package: <https://www.npmjs.com/package/@bertt/cesium-mapterhorn-provider>
 
 Mapterhorn serves global elevation as **Terrarium-encoded** 512 px WebP tiles in the XYZ / Web Mercator scheme:
 

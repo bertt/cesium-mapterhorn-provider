@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Mapterhorn terrain + GEBCO bathymetry</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <script src="../dist/cesium-mapterhorn-provider.min.js"></script>
+  <style>
+    html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; }
+    #controls {
+      position: absolute; top: 10px; left: 10px; z-index: 1;
+      background: rgba(30, 30, 30, 0.8); color: #fff; font: 14px sans-serif;
+      padding: 8px 12px; border-radius: 4px;
+    }
+    #controls h1 { font-size: 16px; margin: 0 0 8px; }
+    #controls > div { margin-bottom: 8px; }
+    #controls > div:last-child { margin-bottom: 0; }
+    #controls input[type=range] { vertical-align: middle; width: 180px; }
+    #controls small { color: #bbb; }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="controls">
+    <h1>Mapterhorn terrain + GEBCO bathymetry</h1>
+    <div>
+      <label for="exaggeration">Terrain exaggeration:</label>
+      <input id="exaggeration" type="range" min="1" max="10" step="0.1" value="1" />
+      <span id="exaggerationValue">1.0x</span>
+    </div>
+    <div>
+      <label for="gebcoOpacity">GEBCO opacity:</label>
+      <input id="gebcoOpacity" type="range" min="0" max="1" step="0.05" value="1" />
+      <span id="gebcoOpacityValue">100%</span>
+    </div>
+    <div><small>Land: Mapterhorn terrain. Seabed: GEBCO colour map draped on the sea surface.</small></div>
+  </div>
+  <script>
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      baseLayer: new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        maximumLevel: 19,
+        credit: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      })),
+      terrainProvider: new CesiumMapterhorn.MapterhornTerrainProvider(),
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: false,
+      navigationHelpButton: false,
+      animation: false,
+      timeline: false,
+      fullscreenButton: false,
+      infoBox: false,
+      selectionIndicator: false,
+    });
+    viewer.scene.globe.depthTestAgainstTerrain = true;
+
+    const gebco = viewer.imageryLayers.addImageryProvider(
+      new Cesium.WebMapServiceImageryProvider({
+        url: "https://wms.gebco.net/mapserv",
+        layers: "GEBCO_LATEST",
+        parameters: { format: "image/png", transparent: true },
+        credit: "GEBCO Compilation Group (2024) GEBCO Grid",
+      }),
+    );
+
+    const exaggeration = document.getElementById("exaggeration");
+    exaggeration.addEventListener("input", () => {
+      const value = parseFloat(exaggeration.value);
+      viewer.scene.verticalExaggeration = value;
+      document.getElementById("exaggerationValue").textContent = value.toFixed(1) + "x";
+    });
+
+    const opacity = document.getElementById("gebcoOpacity");
+    opacity.addEventListener("input", () => {
+      gebco.alpha = parseFloat(opacity.value);
+      document.getElementById("gebcoOpacityValue").textContent = Math.round(gebco.alpha * 100) + "%";
+    });
+
+    // Big Island of Hawaii and the surrounding seabed
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(-154.5, 17.0, 300000),
+      orientation: { heading: Cesium.Math.toRadians(335), pitch: Cesium.Math.toRadians(-35) },
+    });
+  </script>
+</body>
+</html>
