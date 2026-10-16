@@ -28,6 +28,13 @@
       <input id="tileUrl" type="text" value="https://tiles.mapterhorn.com/{z}/{x}/{y}.webp" />
       <button id="applyUrl">Apply</button>
     </div>
+    <div>
+      <label for="vref">Vertical reference:</label>
+      <select id="vref">
+        <option value="geoid">Geoid (MSL, default)</option>
+        <option value="ellipsoid">WGS84 ellipsoid (+ EGM2008)</option>
+      </select>
+    </div>
     <label for="exaggeration">Terrain exaggeration:</label>
     <input id="exaggeration" type="range" min="1" max="10" step="0.1" value="1" />
     <span id="exaggerationValue">1.0x</span>
@@ -54,11 +61,14 @@
       selectionIndicator: false,
     });
 
-    document.getElementById("applyUrl").addEventListener("click", () => {
+    function applyProvider() {
       viewer.scene.terrainProvider = new CesiumMapterhorn.MapterhornTerrainProvider({
         url: document.getElementById("tileUrl").value.trim(),
+        verticalReference: document.getElementById("vref").value,
       });
-    });
+    }
+    document.getElementById("applyUrl").addEventListener("click", applyProvider);
+    document.getElementById("vref").addEventListener("change", applyProvider);
     viewer.scene.globe.depthTestAgainstTerrain = true;
 
     const slider = document.getElementById("exaggeration");

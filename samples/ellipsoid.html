@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Geoid vs. ellipsoid heights – Mapterhorn terrain</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <script src="../dist/cesium-mapterhorn-provider.min.js"></script>
+  <style>
+    html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; }
+    #controls { position: absolute; top: 10px; left: 10px; z-index: 1; background: rgba(255,255,255,.92); padding: 10px 14px; border-radius: 6px; max-width: 340px; font-size: 13px; }
+    #controls h1 { font-size: 15px; margin: 0 0 6px; }
+    #controls p { margin: 6px 0; }
+    #readout { font-family: monospace; white-space: pre; background: #f3f3f3; padding: 6px; min-height: 5em; }
+    button, select { margin: 2px 2px 2px 0; }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="controls">
+    <h1>Geoid vs. ellipsoid</h1>
+    <div>
+      <label for="vref">Vertical reference:</label>
+      <select id="vref">
+        <option value="geoid">Geoid / MSL (default)</option>
+        <option value="ellipsoid">WGS84 ellipsoid (+ EGM2008)</option>
+      </select>
+    </div>
+    <div>
+      Go to:
+      <button data-lon="4.3" data-lat="52.1" data-h="30000">Netherlands (N ≈ +45 m)</button>
+      <button data-lon="86.925" data-lat="27.988" data-h="25000">Everest (N ≈ −28 m)</button>
+      <button data-lon="-122.4" data-lat="37.8" data-h="30000">San Francisco (N ≈ −32 m)</button>
+    </div>
+    <p>The red rectangle sits at <b>ellipsoid height 0 m</b>. In the Netherlands sea level is ≈ +45 m above the ellipsoid: in <i>ellipsoid</i> mode the terrain rises ~45 m and the rectangle ends up below the surface; in <i>geoid</i> mode the coastal terrain is ≈ 0 m and meets the rectangle.</p>
+    <p>Click the globe to read the terrain height at that point.</p>
+    <div id="readout">Click the terrain…</div>
+  </div>
+  <script>
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      baseLayer: new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        maximumLevel: 19,
+        credit: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      })),
+      terrainProvider: new CesiumMapterhorn.MapterhornTerrainProvider(),
+      baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
+      navigationHelpButton: false, animation: false, timeline: false, infoBox: false,
+      selectionIndicator: false,
+    });
+    viewer.scene.globe.depthTestAgainstTerrain = true;
+
+    // Reference plane at ellipsoid height 0 m (Netherlands coast around The Hague).
+    viewer.entities.add({
+      rectangle: {
+        coordinates: Cesium.Rectangle.fromDegrees(3.9, 51.95, 4.4, 52.2),
+        height: 0,
+        heightReference: Cesium.HeightReference.NONE,
+        material: Cesium.Color.RED.withAlpha(0.5),
+        outline: true,
+        outlineColor: Cesium.Color.RED,
+      },
+    });
+
+    let provider;
+    function applyProvider() {
+      provider = new CesiumMapterhorn.MapterhornTerrainProvider({
+        verticalReference: document.getElementById("vref").value,
+      });
+      provider.errorEvent.addEventListener((e) => console.error("Terrain error:", e));
+      viewer.scene.terrainProvider = provider;
+    }
+    document.getElementById("vref").addEventListener("change", applyProvider);
+    applyProvider();
+
+    function flyTo(lon, lat, h) {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat - 0.15, h),
+        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-40) },
+        duration: 1.5,
+      });
+    }
+    document.querySelectorAll("button[data-lon]").forEach((b) =>
+      b.addEventListener("click", () => flyTo(+b.dataset.lon, +b.dataset.lat, +b.dataset.h)));
+    flyTo(4.3, 52.1, 30000);
+
+    viewer.screenSpaceEventHandler.setInputAction((click) => {
+      const cart = viewer.scene.pickPosition(click.position);
+      if (!Cesium.defined(cart)) return;
+      const c = Cesium.Cartographic.fromCartesian(cart);
+      document.getElementById("readout").textContent =
+        `mode:      ${document.getElementById("vref").value}\n` +
+        `lon/lat:   ${Cesium.Math.toDegrees(c.longitude).toFixed(4)}, ${Cesium.Math.toDegrees(c.latitude).toFixed(4)}\n` +
+        `height (m above WGS84 ellipsoid): ${c.height.toFixed(1)}`;
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  </script>
+</body>
+</html>
