@@ -14,6 +14,8 @@ A [CesiumJS](https://cesium.com/cesiumjs/) terrain provider for [Mapterhorn](htt
 
 npm package: <https://www.npmjs.com/package/@bertt/cesium-mapterhorn-provider>
 
+**[Sample: geoid vs. ellipsoid heights](https://bertt.github.io/cesium-mapterhorn-provider/samples/ellipsoid.html)** – toggle `verticalReference` and compare the terrain against a reference plane at ellipsoid height 0 m (source: [`samples/ellipsoid.html`](samples/ellipsoid.html)). Run locally with `npm start` and open <http://localhost:8080/samples/ellipsoid.html>.
+
 Mapterhorn serves global elevation as **Terrarium-encoded** 512 px WebP tiles in the XYZ / Web Mercator scheme:
 
 ```
@@ -68,6 +70,22 @@ The global build requires `window.Cesium` to be loaded first.
 | `credit` | `"Mapterhorn"` | Attribution shown in the viewer. |
 | `headers` | – | Extra HTTP request headers. |
 | `ellipsoid` | `Ellipsoid.WGS84` | Ellipsoid. |
+| `verticalReference` | `"geoid"` | `"geoid"`: Mapterhorn heights unchanged (orthometric, above EGM2008 geoid). `"ellipsoid"`: add the EGM2008 geoid undulation → WGS84 ellipsoidal heights. See below. |
+| `geoidUrl` | `https://cdn.proj.org/us_nga_egm08_25.tif` | Geoid grid (float32 COG) used when `verticalReference: "ellipsoid"`. |
+
+## Vertical reference (geoid vs. ellipsoid)
+
+Mapterhorn heights are **orthometric** (above the EGM2008 geoid / mean sea level), while Cesium draws the globe on the **WGS84 ellipsoid**. The two differ by the geoid undulation `N` (roughly −106 m … +85 m; ≈ +45 m in the Netherlands), so terrain can appear tens of metres too low or high compared to ellipsoid-referenced data (GNSS, 3D Tiles, ...).
+
+By default nothing is changed. To convert on the fly (same approach as [reearth-terrain](https://github.com/reearth/reearth-terrain)):
+
+```js
+new MapterhornTerrainProvider({ verticalReference: "ellipsoid" });
+```
+
+`ellipsoidal height = Mapterhorn height + N(lon, lat)`. `N` is read from the EGM2008 2.5′ grid ([PROJ CDN](https://cdn.proj.org/), `us_nga_egm08_25.tif`, ~80 MB) using HTTP Range requests, so only the small grid tiles near the visible terrain are downloaded and cached (LRU). Per terrain tile `N` is sampled on a 9×9 grid and bilinearly interpolated, since the geoid is very smooth. The file must be served with CORS and Range support (the PROJ CDN does); otherwise host a copy and set `geoidUrl`. If the grid cannot be loaded, the tile request fails and the provider's `errorEvent` fires.
+
+Note: with the default `"geoid"` the terrain does not sit on the ellipsoid; use `"ellipsoid"` when combining the terrain with ellipsoid-referenced data.
 
 ## Build
 

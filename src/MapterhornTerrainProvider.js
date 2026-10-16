@@ -6,7 +6,10 @@ import {
   TerrainProvider,
   WebMercatorTilingScheme,
   Ellipsoid,
+  WebMercatorProjection,
+  Math as CesiumMath,
 } from "cesium";
+import { GeoidSampler, DEFAULT_GEOID_URL } from "./GeoidSampler.js";
 
 export const DEFAULT_URL = "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp";
 
@@ -36,6 +39,10 @@ function createCanvas(w, h) {
  * @param {Ellipsoid} [options.ellipsoid]
  * @param {Credit|string} [options.credit]
  * @param {object} [options.headers] Extra request headers.
+ * @param {"geoid"|"ellipsoid"} [options.verticalReference="geoid"] Vertical reference of the
+ *   heights handed to Cesium. "geoid" passes Mapterhorn's orthometric (EGM2008) heights
+ *   unchanged; "ellipsoid" adds the EGM2008 geoid undulation to give WGS84 ellipsoidal heights.
+ * @param {string} [options.geoidUrl] Geoid COG (float32 GeoTIFF) used for "ellipsoid".
  */
 export class MapterhornTerrainProvider {
   constructor(options = {}) {
@@ -43,6 +50,14 @@ export class MapterhornTerrainProvider {
     this._maxLevel = options.maxLevel ?? 17;
     this._resolution = options.heightmapResolution ?? 65;
     this._headers = options.headers;
+    const ref = options.verticalReference ?? "geoid";
+    if (ref !== "geoid" && ref !== "ellipsoid") {
+      throw new Error('verticalReference must be "geoid" or "ellipsoid"');
+    }
+    this._geoid =
+      ref === "ellipsoid"
+        ? new GeoidSampler({ url: options.geoidUrl ?? DEFAULT_GEOID_URL })
+        : undefined;
     this._tilingScheme = new WebMercatorTilingScheme({
       ellipsoid: options.ellipsoid ?? Ellipsoid.WGS84,
     });
@@ -76,6 +91,49 @@ export class MapterhornTerrainProvider {
     return undefined;
   }
 
+  // Coarse geoid grid over the tile (the geoid is smooth); returns a bilinear fn of tile-relative u,v.
+  async _undulationGrid(x, y, level) {
+    const m = 9;
+    const scheme = this._tilingScheme;
+    const rect = scheme.tileXYToNativeRectangle(x, y, level);
+    const radius = scheme.ellipsoid.maximumRadius;
+    const lons = [];
+    const lats = [];
+    for (let k = 0; k < m; k++) {
+      const f = k / (m - 1);
+      lons.push(CesiumMath.toDegrees((rect.west + f * (rect.east - rect.west)) / radius));
+      const my = rect.north - f * (rect.north - rect.south);
+      lats.push(
+        CesiumMath.toDegrees(WebMercatorProjection.mercatorAngleToGeodeticLatitude(my / radius)),
+      );
+    }
+    try {
+      await this._geoid.prepare(lons, lats);
+    } catch (e) {
+      this._errorEvent.raiseEvent(e);
+      throw e;
+    }
+    const grid = new Float32Array(m * m);
+    for (let r = 0; r < m; r++) {
+      for (let c = 0; c < m; c++) {
+        grid[r * m + c] = this._geoid.sample(lons[c], lats[r]) ?? 0;
+      }
+    }
+    return (u, v) => {
+      const fx = u * (m - 1);
+      const fy = v * (m - 1);
+      const c0 = Math.min(Math.floor(fx), m - 2);
+      const r0 = Math.min(Math.floor(fy), m - 2);
+      const tx = fx - c0;
+      const ty = fy - r0;
+      const g = (r, c) => grid[r * m + c];
+      return (
+        (g(r0, c0) * (1 - tx) + g(r0, c0 + 1) * tx) * (1 - ty) +
+        (g(r0 + 1, c0) * (1 - tx) + g(r0 + 1, c0 + 1) * tx) * ty
+      );
+    };
+  }
+
   async requestTileGeometry(x, y, level, request) {
     if (level > this._maxLevel) return undefined;
 
@@ -104,6 +162,9 @@ export class MapterhornTerrainProvider {
     const pixels = ctx.getImageData(0, 0, size, size).data;
 
     const n = this._resolution;
+    const undulation = this._geoid
+      ? await this._undulationGrid(x, y, level)
+      : undefined;
     const heights = new Float32Array(n * n);
     const last = size - 1;
     const height = (px, py) => {
@@ -126,6 +187,7 @@ export class MapterhornTerrainProvider {
         const top = height(x0, y0) * (1 - tx) + height(x1, y0) * tx;
         const bottom = height(x0, y1) * (1 - tx) + height(x1, y1) * tx;
         heights[j * n + i] = top * (1 - ty) + bottom * ty;
+        if (undulation) heights[j * n + i] += undulation(i / (n - 1), j / (n - 1));
       }
     }
 
